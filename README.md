@@ -67,8 +67,13 @@ python apply_csv_metadata.py
 ```
 
 The script updates each MP3 named by `old_filename`, then renames it to
-`new_filename`. Existing album-art tags are replaced when an `image` is
-provided. The script will not overwrite an existing destination file.
+`new_filename`. After all rows succeed, it renames the MP3 directory to the
+album name from the CSV. Existing album-art tags are replaced when an `image`
+is provided. The script will not overwrite an existing destination file or
+album directory.
+
+All rows must use the same album name. The album name must be a valid single
+directory name, not a path.
 
 ## Run with the Windows batch file
 
@@ -100,6 +105,7 @@ If any row fails, the script exits with a non-zero status. Common causes are:
 
 - The `old_filename` does not exist in the MP3 directory.
 - The `new_filename` already exists in the MP3 directory.
+- The album directory name is unsafe or already exists.
 - The artwork file in `image` does not exist.
 - The `track_number` is not a positive integer.
 - The file is not a valid or readable MP3.

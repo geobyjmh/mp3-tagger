@@ -143,6 +143,27 @@ def apply_row(directory, row):
     return mp3_path
 
 
+def rename_album_directory(directory, rows):
+    albums = {row["album"].strip() for row in rows}
+    if not albums or "" in albums:
+        raise ValueError("album must not be empty")
+    if len(albums) != 1:
+        raise ValueError("all CSV rows must use the same album name")
+
+    album_name = albums.pop()
+    if Path(album_name).name != album_name or album_name in {".", ".."}:
+        raise ValueError(f"album is not a valid directory name: {album_name}")
+
+    new_directory = directory.parent / album_name
+    if new_directory == directory:
+        return directory
+    if new_directory.exists():
+        raise FileExistsError(f"Album directory already exists: {new_directory}")
+
+    directory.rename(new_directory)
+    return new_directory
+
+
 def main():
     config_file = Path(__file__).with_name("info.txt")
     if not config_file.is_file():
@@ -182,6 +203,14 @@ def main():
             processed += 1
         except (OSError, MutagenError, ValueError, TypeError) as error:
             print(f"Error on CSV row {row_number}: {error}", file=sys.stderr)
+            errors += 1
+
+    if errors == 0:
+        try:
+            directory = rename_album_directory(directory, rows)
+            print(f"Album directory: {directory}")
+        except (OSError, ValueError) as error:
+            print(f"Error renaming album directory: {error}", file=sys.stderr)
             errors += 1
 
     print(f"Completed: {processed} updated, {errors} errors")
