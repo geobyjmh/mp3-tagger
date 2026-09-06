@@ -112,6 +112,13 @@ def apply_row(directory, row):
     if not mp3_path.is_file():
         raise FileNotFoundError(f"MP3 file not found: {mp3_path}")
 
+    new_filename = row["new_filename"].strip()
+    if not new_filename:
+        raise ValueError("new_filename must not be empty")
+    new_mp3_path = resolve_path(directory, new_filename)
+    if new_mp3_path != mp3_path and new_mp3_path.exists():
+        raise FileExistsError(f"Target filename already exists: {new_mp3_path}")
+
     image_name = row["image"].strip()
     image_path = resolve_path(directory, image_name) if image_name else None
     if image_path and not image_path.is_file():
@@ -130,6 +137,10 @@ def apply_row(directory, row):
         embed_image(audio.tags, image_path)
 
     audio.save()
+    if new_mp3_path != mp3_path:
+        mp3_path.rename(new_mp3_path)
+        return new_mp3_path
+    return mp3_path
 
 
 def main():
@@ -166,8 +177,8 @@ def main():
     errors = 0
     for row_number, row in enumerate(rows, start=2):
         try:
-            apply_row(directory, row)
-            print(f"Updated row {row_number}: {row['old_filename']}")
+            final_path = apply_row(directory, row)
+            print(f"Updated and renamed row {row_number}: {final_path.name}")
             processed += 1
         except (OSError, MutagenError, ValueError, TypeError) as error:
             print(f"Error on CSV row {row_number}: {error}", file=sys.stderr)

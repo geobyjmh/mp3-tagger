@@ -40,8 +40,7 @@ Required columns:
 - `album`: Written to the album tag.
 - `old_filename`: Existing MP3 filename to process.
 - `image`: Album-art filename. Leave empty to skip artwork.
-- `new_filename`: Required as a CSV column for compatibility, but it is not
-  used by the metadata script and files are not renamed.
+- `new_filename`: Destination filename for the processed MP3.
 
 Place the CSV and album-art file in the MP3 directory, or use paths that are
 relative to that directory. Absolute paths are also supported.
@@ -67,9 +66,9 @@ From the repository directory, run:
 python apply_csv_metadata.py
 ```
 
-The script updates each MP3 named by `old_filename`. It does not rename or
-delete files. Existing album-art tags are replaced when an `image` is
-provided.
+The script updates each MP3 named by `old_filename`, then renames it to
+`new_filename`. Existing album-art tags are replaced when an `image` is
+provided. The script will not overwrite an existing destination file.
 
 ## Run with the Windows batch file
 
@@ -100,6 +99,7 @@ Completed: 14 updated, 0 errors
 If any row fails, the script exits with a non-zero status. Common causes are:
 
 - The `old_filename` does not exist in the MP3 directory.
+- The `new_filename` already exists in the MP3 directory.
 - The artwork file in `image` does not exist.
 - The `track_number` is not a positive integer.
 - The file is not a valid or readable MP3.
