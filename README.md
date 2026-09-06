@@ -46,12 +46,25 @@ Required columns:
 Place the CSV and album-art file in the MP3 directory, or use paths that are
 relative to that directory. Absolute paths are also supported.
 
+## Configure paths
+
+Create or edit `info.txt` in the repository directory:
+
+```text
+MP3_DIR=C:\Music\Rank
+CSV_FILE=C:\Music\Rank\tracks.csv
+```
+
+`MP3_DIR` is the directory containing the MP3 files and album artwork.
+`CSV_FILE` is the CSV metadata file. Paths may contain spaces and may be
+absolute or relative to the current working directory.
+
 ## Run from PowerShell
 
 From the repository directory, run:
 
 ```powershell
-python apply_csv_metadata.py "C:\Music\Rank" "C:\Music\Rank\tracks.csv"
+python apply_csv_metadata.py
 ```
 
 The script updates each MP3 named by `old_filename`. It does not rename or
@@ -60,15 +73,9 @@ provided.
 
 ## Run with the Windows batch file
 
-Open `run_apply_csv_metadata.bat` in a text editor and update these lines:
-
-```bat
-set "MP3_DIR=C:\path\to\your\mp3-folder"
-set "CSV_FILE=C:\path\to\your\tracks.csv"
-```
-
-Save the file, then double-click it. The batch file runs the Python script and
-keeps the window open so that you can read the results.
+Edit the paths in `info.txt`, then double-click
+`run_apply_csv_metadata.bat`. The batch file runs the Python script and keeps
+the window open so that you can read the results.
 
 If Python is not available through the `python` command, replace:
 

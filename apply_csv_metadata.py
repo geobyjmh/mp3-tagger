@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 """Apply ID3 metadata from a CSV track list to MP3 files."""
 
-import argparse
 import csv
 import mimetypes
 import sys
@@ -22,28 +21,59 @@ REQUIRED_COLUMNS = {
 }
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Apply ID3 metadata from a CSV file to MP3 files."
-    )
-    parser.add_argument(
-        "directory",
-        type=Path,
-        help="Directory containing the MP3 files and album artwork",
-    )
-    parser.add_argument("csv_file", type=Path, help="CSV metadata file")
-    return parser.parse_args()
+def load_config(config_file):
+    values = {}
+    with config_file.open("r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                raise ValueError(
+                    f"Invalid setting on line {line_number}; expected NAME=VALUE"
+                )
+            name, value = line.split("=", 1)
+            name = name.strip()
+            value = value.strip().strip('"')
+            if name not in {"MP3_DIR", "CSV_FILE"}:
+                raise ValueError(f"Unknown setting on line {line_number}: {name}")
+            values[name] = value
+
+    missing = {"MP3_DIR", "CSV_FILE"} - values.keys()
+    if missing:
+        names = ", ".join(sorted(missing))
+        raise ValueError(f"info.txt is missing required settings: {names}")
+    return Path(values["MP3_DIR"]), Path(values["CSV_FILE"])
 
 
 def load_rows(csv_file):
     with csv_file.open("r", encoding="utf-8-sig", newline="") as file:
         reader = csv.DictReader(file)
-        columns = set(reader.fieldnames or [])
+        if not reader.fieldnames:
+            raise ValueError("CSV must contain a header row")
+
+        reader.fieldnames = [
+            field.strip() if field else field for field in reader.fieldnames
+        ]
+        columns = set(reader.fieldnames)
         missing = REQUIRED_COLUMNS - columns
         if missing:
             names = ", ".join(sorted(missing))
             raise ValueError(f"CSV is missing required columns: {names}")
-        return list(reader)
+
+        rows = []
+        for line_number, row in enumerate(reader, start=2):
+            if all(not (value or "").strip() for value in row.values()):
+                continue
+            if None in row:
+                raise ValueError(f"CSV row {line_number} has too many columns")
+            rows.append(
+                {
+                    key: value.strip() if isinstance(value, str) else value
+                    for key, value in row.items()
+                }
+            )
+        return rows
 
 
 def resolve_path(directory, filename):
@@ -59,7 +89,9 @@ def embed_image(tags, image_path):
     with image_path.open("rb") as image_file:
         image_data = image_file.read()
 
-    tags.delall("APIC:")
+    for tag_key in list(tags.keys()):
+        if tag_key.startswith("APIC"):
+            del tags[tag_key]
     tags.add(
         APIC(
             encoding=3,
@@ -89,10 +121,10 @@ def apply_row(directory, row):
     if audio.tags is None:
         audio.add_tags()
 
-    audio.tags[TPE1.FrameID] = TPE1(encoding=3, text=[row["artist"]])
-    audio.tags[TIT2.FrameID] = TIT2(encoding=3, text=[row["title"]])
-    audio.tags[TALB.FrameID] = TALB(encoding=3, text=[row["album"]])
-    audio.tags[TRCK.FrameID] = TRCK(encoding=3, text=[str(track_number)])
+    audio.tags["TPE1"] = TPE1(encoding=3, text=[row["artist"]])
+    audio.tags["TIT2"] = TIT2(encoding=3, text=[row["title"]])
+    audio.tags["TALB"] = TALB(encoding=3, text=[row["album"]])
+    audio.tags["TRCK"] = TRCK(encoding=3, text=[str(track_number)])
 
     if image_path:
         embed_image(audio.tags, image_path)
@@ -101,17 +133,26 @@ def apply_row(directory, row):
 
 
 def main():
-    args = parse_args()
-
-    if not args.directory.is_dir():
-        print(f"Error: directory not found: {args.directory}", file=sys.stderr)
-        return 1
-    if not args.csv_file.is_file():
-        print(f"Error: CSV file not found: {args.csv_file}", file=sys.stderr)
+    config_file = Path(__file__).with_name("info.txt")
+    if not config_file.is_file():
+        print(f"Error: configuration file not found: {config_file}", file=sys.stderr)
         return 1
 
     try:
-        rows = load_rows(args.csv_file)
+        directory, csv_file = load_config(config_file)
+    except (OSError, ValueError) as error:
+        print(f"Error reading configuration: {error}", file=sys.stderr)
+        return 1
+
+    if not directory.is_dir():
+        print(f"Error: directory not found: {directory}", file=sys.stderr)
+        return 1
+    if not csv_file.is_file():
+        print(f"Error: CSV file not found: {csv_file}", file=sys.stderr)
+        return 1
+
+    try:
+        rows = load_rows(csv_file)
     except (OSError, csv.Error, ValueError) as error:
         print(f"Error reading CSV: {error}", file=sys.stderr)
         return 1
@@ -119,12 +160,13 @@ def main():
     if not rows:
         print("Error: CSV contains no track rows", file=sys.stderr)
         return 1
+    print(f"Loaded {len(rows)} track rows from {csv_file}")
 
     processed = 0
     errors = 0
     for row_number, row in enumerate(rows, start=2):
         try:
-            apply_row(args.directory, row)
+            apply_row(directory, row)
             print(f"Updated row {row_number}: {row['old_filename']}")
             processed += 1
         except (OSError, MutagenError, ValueError, TypeError) as error:
