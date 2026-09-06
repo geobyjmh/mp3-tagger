@@ -1,0 +1,2 @@
+MP3_DIR=C:\Users\julia\OneDrive\Projects2026\mp3 project\Unknown artist\Unknown album
+CSV_FILE=C:\Users\julia\OneDrive\Projects2026\mp3 project\Unknown artist\Unknown album\tracks.csv
