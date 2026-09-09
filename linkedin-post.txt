@@ -1,0 +1,19 @@
+I built this MP3 ID3 Metadata Tool as a project to learn and practise vibe
+coding.
+
+The tool takes a CSV track list and uses it to organise a collection of MP3
+files. It writes ID3 metadata such as the artist, track title, album, and track
+number, embeds album artwork, renames each file into a consistent format, and
+renames the containing folder to the album name.
+
+The project was a practical way to explore how an idea can be developed by
+describing the desired behaviour, reviewing the generated code, testing it
+against real files, and iterating on the implementation. It also helped me
+learn more about Python, CSV processing, Windows batch files, file handling,
+and the Mutagen library.
+
+This is a small project, but it demonstrates how vibe coding can turn a
+real-world task into a useful tool while still requiring careful testing,
+validation, and human review.
+
+#Python #VibeCoding #LearningToCode #Automation #MusicTechnology #OpenSource
